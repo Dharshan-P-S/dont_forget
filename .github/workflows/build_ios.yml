@@ -1,0 +1,38 @@
+name: Build iOS IPA for ESign
+
+on:
+  workflow_dispatch: # Allows you to trigger the build manually from GitHub
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS App (Unsigned)
+        # On macOS, the --no-codesign flag is fully supported
+        run: flutter build ios --release --no-codesign
+
+      - name: Package into IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir Payload
+          mv Runner.app Payload/
+          zip -qq -r DontForget.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DontForget-IPA
+          path: build/ios/iphoneos/DontForget.ipa
+          retention-days: 3
