@@ -1,4 +1,5 @@
-name: Build iOS IPA for ESign
+
+name: Build DontForget iOS IPA
 
 on:
   workflow_dispatch:
@@ -14,32 +15,39 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
+
+      - name: Check Flutter
+        run: flutter doctor -v
 
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build iOS App (Unsigned)
-        # The "|| true" tells GitHub to ignore Flutter's certificate warning at the end
-        run: flutter build ios --release --no-codesign || true
+      - name: Analyze Flutter Code
+        run: flutter analyze
 
-      - name: Package into IPA
+      - name: Build Unsigned iOS App
+        run: flutter build ios --release --no-codesign
+
+      - name: Package Unsigned IPA
         run: |
+          set -euo pipefail
+
           cd build/ios/iphoneos
-          
-          # Safety check: Make sure the app actually exists before zipping
+
           if [ ! -d "Runner.app" ]; then
-            echo "Runner.app was not found! The Xcode build actually failed."
+            echo "Runner.app not found. Build failed."
             exit 1
           fi
-          
-          mkdir Payload
-          mv Runner.app Payload/
-          zip -qq -r DontForget.ipa Payload
 
-      - name: Upload IPA Artifact
+          mkdir -p Payload
+          cp -R Runner.app Payload/
+
+          zip -qry DontForget-unsigned.ipa Payload
+
+      - name: Upload Unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: DontForget-IPA
-          path: build/ios/iphoneos/DontForget.ipa
-          retention-days: 3
+          name: DontForget-unsigned-IPA
+          path: build/ios/iphoneos/DontForget-unsigned.ipa
+          retention-days: 7
