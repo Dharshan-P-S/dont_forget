@@ -20,20 +20,34 @@ jobs:
         run: flutter pub get
 
       - name: Build iOS App (Unsigned)
-        # This tells GitHub: "Xcode is going to throw a tantrum about missing certificates at the end. Ignore it completely and move to the next step."
         continue-on-error: true 
         run: flutter build ios --release --no-codesign
 
       - name: Package into IPA
         run: |
-          cd build/ios/iphoneos
+          # 1. Search the entire project for the Runner.app folder
+          APP_PATH=$(find . -name "Runner.app" -type d | head -n 1)
+          
+          # 2. Check if we actually found it
+          if [ -z "$APP_PATH" ]; then
+            echo "Runner.app was not found anywhere. The Xcode build failed completely."
+            exit 1
+          fi
+          
+          echo "Successfully found the app at: $APP_PATH"
+          
+          # 3. Create the Payload folder in the root directory
           mkdir Payload
-          mv Runner.app Payload/
+          
+          # 4. Copy the app into the Payload folder
+          cp -r "$APP_PATH" Payload/
+          
+          # 5. Zip it into an IPA
           zip -qq -r DontForget.ipa Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: DontForget-IPA
-          path: build/ios/iphoneos/DontForget.ipa
+          path: DontForget.ipa
           retention-days: 3
