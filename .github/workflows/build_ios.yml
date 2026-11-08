@@ -25,25 +25,24 @@ jobs:
 
       - name: Package into IPA
         run: |
-          # 1. Search the entire project for the Runner.app folder
-          APP_PATH=$(find . -name "Runner.app" -type d | head -n 1)
+          # 1. Search specifically for the physical device Release build
+          APP_PATH=$(find build/ios -name "Runner.app" | grep "Release-iphoneos" | head -n 1)
           
-          # 2. Check if we actually found it
           if [ -z "$APP_PATH" ]; then
-            echo "Runner.app was not found anywhere. The Xcode build failed completely."
+            echo "Physical device Runner.app was not found. The Xcode build failed completely."
             exit 1
           fi
           
           echo "Successfully found the app at: $APP_PATH"
           
-          # 3. Create the Payload folder in the root directory
+          # 2. Create the Payload folder
           mkdir Payload
           
-          # 4. Copy the app into the Payload folder
-          cp -r "$APP_PATH" Payload/
+          # 3. Copy the app while preserving ALL original Apple permissions and symlinks (-a)
+          cp -a "$APP_PATH" Payload/
           
-          # 5. Zip it into an IPA
-          zip -qq -r DontForget.ipa Payload
+          # 4. Zip it into an IPA while preserving symlinks (-y is CRITICAL for iOS frameworks)
+          zip -qq -r -y DontForget.ipa Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
