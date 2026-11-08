@@ -19,40 +19,43 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build iOS App (Unsigned)
+      - name: Prepare Flutter Assets
+        # We let Flutter bundle the UI and assets. It will crash at the end, but we ignore it.
         continue-on-error: true 
         run: flutter build ios --release --no-codesign
 
+      - name: Compile Native iOS Binary
+        # We use Apple's native Xcode tool directly, forcing it to finish the binary without a signature.
+        run: |
+          xcodebuild build \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            -quiet
+
       - name: Package into IPA
         run: |
-          # 1. Search specifically for the physical device Release build
-          APP_PATH=$(find build/ios -name "Runner.app" | grep "iphoneos" | head -n 1)
+          # 1. Search for the fully completed app folder
+          APP_PATH=$(find . -name "Runner.app" | grep "Release-iphoneos" | head -n 1)
           
           if [ -z "$APP_PATH" ]; then
-            echo "Physical device Runner.app was not found. The Xcode build failed completely."
+            echo "Runner.app was not found. Xcode build failed."
             exit 1
           fi
           
-          echo "Successfully found the app at: $APP_PATH"
+          echo "Packaging app from: $APP_PATH"
           
           # 2. Create the Payload folder
           mkdir Payload
           
-          # 3. Copy the app while preserving ALL original Apple permissions and symlinks (-Rp)
+          # 3. Copy the completed app, preserving Apple's file structures (-Rp)
           cp -Rp "$APP_PATH" Payload/
           
-          # 4. CRITICAL ESIGN FIX: Delete Xcode's dummy signature folder
-          rm -rf Payload/Runner.app/_CodeSignature
-          
-          # 5. Debug check: Print the contents of the app folder so we can see exactly what Xcode generated
-          echo "--- APP CONTENTS ---"
-          ls -la Payload/Runner.app/
-          echo "--------------------"
-          
-          # 6. CRITICAL ESIGN FIX: Force everything in the root folder to be executable (bypassing PlistBuddy)
-          chmod +x Payload/Runner.app/* || true
-          
-          # 7. Zip it into an IPA while preserving symlinks (-y is CRITICAL for iOS frameworks)
+          # 4. Zip it into an IPA, preserving internal framework shortcuts (-y)
           zip -qq -r -y DontForget.ipa Payload
 
       - name: Upload IPA Artifact
