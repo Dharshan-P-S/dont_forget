@@ -66,7 +66,6 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<!-- Alarm & Notification Permissions -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
@@ -75,9 +74,7 @@
 	</array>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>DontForget needs notification access to alert you exactly when your scheduled alarms and reminders occur.</string>
-	
-	<!-- Time Sensitive Entitlement request (Crucial for iOS 15+) -->
-	<key>NSRemindersUsageDescription</key>
+		<key>NSRemindersUsageDescription</key>
 	<string>DontForget uses local scheduling to ensure your recurring alarms fire exactly on time.</string>
 </dict>
 </plist>
