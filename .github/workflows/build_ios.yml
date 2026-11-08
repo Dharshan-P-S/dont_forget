@@ -20,12 +20,20 @@ jobs:
         run: flutter pub get
 
       - name: Prepare Flutter Assets
-        # We let Flutter bundle the UI and assets. It will crash at the end, but we ignore it.
+        # This generates the App.framework and flutter_assets needed for iOS
         continue-on-error: true 
         run: flutter build ios --release --no-codesign
 
+      - name: Sanitize Build Environment
+        # CRITICAL: Delete the messy Xcode cache created by Flutter before we run native Xcode
+        run: |
+          rm -rf build/ios
+          rm -rf ios/Pods
+          cd ios
+          pod install
+
       - name: Compile Native iOS Binary
-        # We use Apple's native Xcode tool directly, forcing it to finish the binary without a signature.
+        # Run Apple's native compiler on a perfectly clean slate
         run: |
           xcodebuild build \
             -workspace ios/Runner.xcworkspace \
@@ -39,8 +47,8 @@ jobs:
 
       - name: Package into IPA
         run: |
-          # 1. Search for the fully completed app folder
-          APP_PATH=$(find . -name "Runner.app" | grep "Release-iphoneos" | head -n 1)
+          # 1. Xcode outputs to DerivedData by default when run natively without an archive path
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "Runner.app" | grep "Release-iphoneos" | head -n 1)
           
           if [ -z "$APP_PATH" ]; then
             echo "Runner.app was not found. Xcode build failed."
