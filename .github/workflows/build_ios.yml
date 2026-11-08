@@ -44,8 +44,10 @@ jobs:
           # 4. CRITICAL ESIGN FIX: Delete Xcode's dummy signature folder
           rm -rf Payload/Runner.app/_CodeSignature
           
-          # 5. CRITICAL ESIGN FIX: Force iOS to recognize the main file as a runnable executable
-          chmod +x Payload/Runner.app/Runner
+          # 5. CRITICAL ESIGN FIX: Dynamically find the exact executable name and force permissions
+          EXEC_NAME=$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" Payload/Runner.app/Info.plist)
+          echo "Executable name is: $EXEC_NAME"
+          chmod +x "Payload/Runner.app/$EXEC_NAME"
           
           # 6. Zip it into an IPA while preserving symlinks (-y is CRITICAL for iOS frameworks)
           zip -qq -r -y DontForget.ipa Payload
